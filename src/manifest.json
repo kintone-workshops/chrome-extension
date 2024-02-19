@@ -15,15 +15,18 @@
   "background": {
     "service_worker": "build/background.js"
   },
+  "side_panel": {
+    "default_path": "index.html"
+  },
   "content_scripts": [
     {
       "matches": ["https://*/*"],
-      "js": ["build/content.js"],
-      "css": ["build/content.css"],
+      "js": ["build/bundle.js"],
+      "css": ["build/bundle.css"],
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["storage", "tabs", "activeTab"],
+  "permissions": ["storage", "tabs", "activeTab", "sidePanel"],
   "host_permissions": ["https://*/*"],
   "web_accessible_resources": [
     {
