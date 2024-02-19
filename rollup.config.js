@@ -65,37 +65,6 @@ export default [
 		},
 	},
 	{
-		input: "src/content/content.ts",
-		output: {
-			sourcemap: false,
-			format: "iife",
-			name: "app",
-			file: "public/build/content.js",
-		},
-		plugins: [
-			typescript({ sourceMap: false }),
-			resolve(),
-			commonjs(),
-			production && terser(),
-		],
-		watch: {
-			clearScreen: false,
-		},
-	},
-	{
-		input: "src/content/content.css",
-		output: {
-			sourcemap: false,
-			file: "public/build/content.css",
-		},
-		plugins: [
-			postcss({
-				extract: true,
-				minimize: production,
-			}),
-		],
-	},
-	{
 		input: "src/main.ts",
 		output: {
 			sourcemap: false,

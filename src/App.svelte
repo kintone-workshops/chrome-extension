@@ -1,13 +1,24 @@
 <script lang="ts">
   import "./tailwind.css";
   import Spinner from "./components/spinner.svelte";
+  import { CheckCircleSolid, CloseSolid } from "flowbite-svelte-icons";
   import { Input, Button } from "flowbite-svelte";
   let message = "";
   let loading = false;
   let success = false;
+  let error = false;
+  let errorMessage = "Error: ";
   let lambdaURL =
     "https://s84u3wjqhh.execute-api.us-east-1.amazonaws.com/default/kintoneChromeExtension";
   const postToKintone = async () => {
+    if (message == "") {
+      error = true;
+      errorMessage += "No text!";
+      return;
+    } else {
+      error = false;
+      errorMessage = 'Error: ';
+    }
     loading = true;
     let body = {
       userMessage: message,
@@ -19,8 +30,13 @@
       },
       body: JSON.stringify(body),
     });
-    console.log(lambdaResponse.json());
     loading = false;
+    if (lambdaResponse.status == 200) {
+      success = true;
+    } else {
+      error = true;
+      errorMessage += "Fetch Request Error.";
+    }
   };
 </script>
 
@@ -50,10 +66,15 @@
   {:else}
     <Button class="m-3" on:click={postToKintone}>Post to Kintone</Button>
   {/if}
-  <Button
-    class="m-3"
-    on:click={() => {
-      loading = !loading;
-    }}>test</Button
-  >
+  {#if success}
+    <div class="flex items-center">
+      <CheckCircleSolid />
+      <p class="text-green-400 m-3">Success</p>
+    </div>
+  {:else if error}
+    <div class="flex items-center">
+      <CloseSolid />
+      <p class="text-red-500 m-3">{errorMessage}</p>
+    </div>
+  {/if}
 </main>
