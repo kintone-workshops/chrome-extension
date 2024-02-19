@@ -1,27 +1,106 @@
-# Kintone Workshop Repo Template
+# Kintone Chrome Extension Sample
 
-## Quick TODO: Items
-* [ ] swap `bit.ly/INSERT_REPO_SHORT_LINK` with the bit.ly link
-* [ ] swap `INSERT_REPO_NAME` with the workshop repo name
-* [ ] swap `youtube.com/live/INSERT_YOUTUBE_LINK` with YouTube Live Link
-* [ ] If not needed, remove `npm install -g @kintone/customize-uploader`
-* [ ] Update ```Create a `.env` File``` section
-* [ ] Update `Create a Kintone Web Database App` section
-* [ ] Swap `bit.ly/INSERT_SURVEY_LINK` with the Survey Link
-* [ ] Run `markdown-link-check` to check broken links - [tcort/markdown-link-check](https://github.com/tcort/markdown-link-check)
-  * `find . -name \*.md -not -path "./node_modules/*" -print0 | xargs -0 -n1 markdown-link-check -p -q`
-* [ ] Run `markdownlint '**/*.md' --ignore node_modules` to check markdown syntax - [igorshubovych/markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli)
+It's a chrome extension that posts to Sean's Environment.
+
+This uses:
+ - Svelte
+ - Tailwind CSS
+ - Flowbite components
+ - Language Locales
+
+It sends your user message to a AWS Lambda, which then handles posting to the Kintone Database for you.
+The Lambda is configured to only allow POST requests from this extension.
+(Note: HTTP request origins **can** be spoofed. Consider more security for valuable information!)
+The Lambda handles the database POST request, so your Kintone API keys are safe somewhere else.
+
+## Install Steps
+
+1. Clone the repo.
+2. Run `npm install`
+3. Run `npm run build` to build the extension.
+4. Open up [Chrome Extension settings](chrome://extensions)
+5. Enable Developer Mode in the Top Right
+6. Click on **Load Unpacked** to load the extension.
+7. Load the **public** folder that gets created when you build.
+8. You should see a new extension installed!
+
 
 ## Resources
 
-| File                                                   | Description                               |
-| ------------------------------------------------------ | ----------------------------------------- |
-| [Common_Kintone.md](Common_Kintone.md)                 | Snippets to describe common Kintone steps |
-| [README_Template.md](README_Template.md)               | _Template for_ README.md                  |
-| [docs/Event_Description.md](docs/Event_Description.md) | _Template for_ Event Description          |
-| [docs/Solution.md](docs/Solution.md)                   | _Template for_ Solution Doc               |
-| [docs/Workshop_Steps.md](docs/Workshop_Steps.md)       | _Template for_ Workshop Steps             |
-| [docs/Zoom_Chat.md](docs/Zoom_Chat.md)                 | _Template for_ Zoom Chat Snippets         |
-| [docs/img/common_kintone](docs/img/common_kintone)     | Screenshots for common Kintone steps      |
-| [docs/img/common_signup](docs/img/common_signup)       | Screenshots for Sign-up process           |
-| [docs/img/common_vscode](docs/img/common_vscode)       | Screenshots for VS Code settings          |
+| File worth looking at                          | Description                                    |
+| ---------------------------------------------- | ---------------------------------------------- |
+| [/src](/src/)                                  | Src Folder containing all Code                 |
+| [App.svelte](/src/App.svelte)                  | Main App content                               |
+| [/src/components](/src/components/)            | An example component for use in Svelte         |
+| [background.ts](/src/background/background.ts) | Tells Chrome to open the extension as a pop-up |
+| [/src/_locales](/src/_locales/)                | Language Locales for the Extension live here   |
+| [manifest.json](/src/manifest.json)            | Extension settings etc for the browser         |
+
+Editing this example is simple as creating your own HTTP request endpoint / AWS Lambda for the fetch request to point to, and handling your own backend logic. We hope this helps!
+
+For reference, our Lambda looks something like this:
+
+```js
+export const handler = async (event, context, callback) => {
+    /* global fetch */
+    const eventBody = await JSON.parse(event.body);
+    console.log('event body')
+    console.log(eventBody)
+    var userMessage = eventBody.userMessage
+    console.log("Message Received: ");
+    console.log(userMessage)
+    var operation;
+    var origin;
+
+    try {
+        operation = event.httpMethod;
+        origin = event.headers.origin;
+    } catch (e) {
+        console.log("ERROR")
+        console.log(e)
+    }
+
+    var url = 'https://MY_SUBDOMAIN.kintone.com/k/v1/record.json';
+    var apiToken = 'MY_API_TOKEN';
+    let postToKintone = async () => {
+        var requestBody = {
+            'app': 102,
+            'record': {
+                'message': {
+                    'value': userMessage
+                }
+            }
+        }
+        const options = {
+            method: 'POST',
+            headers: {
+                'X-Cybozu-API-Token': apiToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        }
+        const response = await fetch(url, options);
+        const jsonResponse = await response.json();
+        console.log(jsonResponse);
+    }
+    var response = false;
+    if (operation == 'POST') {
+      // Chrome Extension's ID
+        if (origin == 'chrome-extension://mfpaoagdcefejdnlkdolplfaolibmial') {
+            console.log("valid POST request from extension");
+            let kintoneResponse = await postToKintone();
+        }
+        response = {
+            statusCode: 200,
+            body: '{"status":"Success", "origin":"' + origin + '", "message":"None"}',
+        };
+    }
+    else {
+        response = {
+            statusCode: 404,
+            body: '{"status":"Operation Failed @ ' + operation + '", "origin":"' + origin + '"}',
+        };
+    }
+    return response;
+};
+```
